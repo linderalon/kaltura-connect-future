@@ -1,12 +1,13 @@
 /** @type {import('next').NextConfig} */
-const isProd = process.env.NODE_ENV === "production";
+// Set NEXT_PUBLIC_BASE_PATH=/kaltura-connect-future for GitHub Pages builds.
+// Leave it empty (or unset) for Netlify / local dev.
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const nextConfig = {
   output: "export",
   trailingSlash: true,
-  // GitHub Pages serves at /kaltura-connect-future — only apply in prod builds
-  basePath: isProd ? "/kaltura-connect-future" : "",
-  assetPrefix: isProd ? "/kaltura-connect-future/" : "",
+  basePath,
+  assetPrefix: basePath ? `${basePath}/` : "",
   images: { unoptimized: true },
 };
 
