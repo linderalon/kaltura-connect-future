@@ -763,15 +763,6 @@ function TarotCardView({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Backdrop */}
-      <motion.div
-        className="absolute inset-0"
-        style={{ backgroundColor: "rgba(7,16,31,0.82)", backdropFilter: "blur(12px)" }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
-      />
-
       {burst && (
         <div className="absolute inset-0 pointer-events-none">
           <ParticleField count={100} burst />
@@ -908,9 +899,7 @@ function TarotCardView({
                       loading="eager"
                     />
                     {/* Gradient blends image into the right panel */}
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, transparent 55%, rgba(43,4,64,0.85) 100%)" }} />
-                    {/* Top/bottom darkening */}
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 30%, transparent 65%, rgba(0,0,0,0.5) 100%)" }} />
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, transparent 60%, rgba(43,4,64,0.9) 100%)" }} />
                   </>
                 )}
                 {/* Top accent bar */}

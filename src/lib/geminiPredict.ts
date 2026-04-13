@@ -107,11 +107,44 @@ export async function generatePrediction(
   const result = await model.generateContent(prompt);
   const text   = result.response.text();
 
-  const prediction  = parseSection(text, "PREDICTION") || getPersonaDetails(persona).fullPrediction.replace(/\[NAME\]/g, visitorName);
-  const rawPersona  = parseSection(text, "PERSONA").trim().toUpperCase().replace(/\s+/g, "_");
-  const detectedPersona: Persona = VALID_PERSONAS.includes(rawPersona as Persona)
-    ? (rawPersona as Persona)
-    : persona;
+  const prediction = parseSection(text, "PREDICTION") || getPersonaDetails(persona).fullPrediction.replace(/\[NAME\]/g, visitorName);
 
-  return { prediction, detectedPersona };
+  // ── Persona detection — three levels of fallback ──────────────────────────
+  const rawPersona = parseSection(text, "PERSONA").trim().toUpperCase().replace(/[\s-]+/g, "_");
+
+  // 1. Exact match
+  let detectedPersona: Persona | null = VALID_PERSONAS.includes(rawPersona as Persona)
+    ? (rawPersona as Persona) : null;
+
+  // 2. Partial key match (handles "FAST_FORWARD" matching "THE_FAST_FORWARD")
+  if (!detectedPersona && rawPersona) {
+    detectedPersona = VALID_PERSONAS.find(p =>
+      p.includes(rawPersona) || rawPersona.includes(p.replace(/^THE_/, ""))
+    ) ?? null;
+  }
+
+  // 3. Full-text scan — look for any VALID_PERSONA key anywhere in the response
+  if (!detectedPersona) {
+    const upper = text.toUpperCase();
+    detectedPersona = VALID_PERSONAS.find(p => upper.includes(p)) ?? null;
+  }
+
+  // 4. Readable-name scan — "Video Visionary", "Fast Forward", etc.
+  if (!detectedPersona) {
+    const lower = text.toLowerCase();
+    const readable: Record<string, Persona> = {
+      "video visionary":    "VIDEO_VISIONARY",
+      "signal in the noise":"SIGNAL_IN_THE_NOISE",
+      "fast forward":       "THE_FAST_FORWARD",
+      "human amplifier":    "HUMAN_AMPLIFIER",
+      "one person studio":  "ONE_PERSON_STUDIO",
+      "one-person studio":  "ONE_PERSON_STUDIO",
+      "knowledge builder":  "KNOWLEDGE_BUILDER",
+    };
+    for (const [name, p] of Object.entries(readable)) {
+      if (lower.includes(name)) { detectedPersona = p; break; }
+    }
+  }
+
+  return { prediction, detectedPersona: detectedPersona ?? persona };
 }
