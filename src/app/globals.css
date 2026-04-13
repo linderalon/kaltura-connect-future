@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Centra No.1 is loaded via next/font/local in layout.tsx — no manual @font-face needed */
+
+:root {
+  --color-background: #0A0A0A;
+  --color-kaltura-green: #5BC686;
+  --color-gold: #FFD700;
+  --color-navy: #16213E;
+}
+
+body {
+  background-color: var(--color-background);
+  color: #ffffff;
+}
+
+/* ── Booth slider ── */
+.booth-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 0.75rem;
+  border-radius: 0.375rem;
+  outline: none;
+  cursor: pointer;
+}
+.booth-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #FFD700;
+  cursor: pointer;
+  border: 4px solid #0A0A0A;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.booth-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.9);
+}
+.booth-slider::-moz-range-thumb {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: #FFD700;
+  cursor: pointer;
+  border: 4px solid #0A0A0A;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+}
+
+/* Prevent text selection during booth interactions */
+.booth-no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@layer utilities {
+  .text-gold {
+    color: var(--color-gold);
+  }
+  .text-kaltura-green {
+    color: var(--color-kaltura-green);
+  }
+  .bg-navy {
+    background-color: var(--color-navy);
+  }
+}
+
+/* ── Green gradient + film-grain noise (button / bg elements) ── */
+.green-grain {
+  background: linear-gradient(
+    135deg,
+    #7EEEA8 0%,
+    #46C47A 35%,
+    #2DA062 65%,
+    #1D7A48 100%
+  );
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Dark film-grain noise layer via SVG feTurbulence */
+.green-grain::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Gradient-text + dark grain — both clipped to the glyph shape */
+.green-gradient-text {
+  display: inline-block;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") center / 160px 160px,
+    linear-gradient(140deg, #C2FFE1 0%, #6EE8A8 30%, #3EBF7C 60%, #1A8F52 100%);
+  background-blend-mode: multiply, normal;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Print styles — clean 4×6 prediction card ── */
+@media print {
+  /* 4 × 6 inches; no margin so the card bleeds edge-to-edge */
+  @page {
+    size: 4in 6in;
+    margin: 0;
+  }
+
+  /* Force dark backgrounds and colors to print */
+  html,
+  body {
+    background-color: #0A0A0A !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Hide everything that shouldn't appear on the card */
+  [data-print-hide],
+  nav,
+  header {
+    display: none !important;
+  }
+
+  /* The card takes the full printed page */
+  [data-print-card] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Remove outer page padding so the card fills the sheet */
+  .min-h-screen {
+    min-height: unset !important;
+    padding: 0 !important;
+    background-color: #16213E !important;
+  }
+}
