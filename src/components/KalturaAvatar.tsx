@@ -382,18 +382,37 @@ export const KalturaAvatar = forwardRef<KalturaAvatarHandle, KalturaAvatarProps>
         else if (IDLE_TYPES.has(type))   { setStatus("idle");      setLoading(false); }
         else if (type === "error" || type === "failed") { setStatus("error"); }
 
-        // ── Session end (leaveRoomBtn) ───────────────────────────────────────
+        // ── Session end (leaveRoomBtn) — type-matched ───────────────────────
         else if (LEAVE_TYPES.has(type)) {
-          console.log("[KalturaAvatar] Leave via postMessage →", type, evt.data);
           if (!sessionEndFiredRef.current) {
             sessionEndFiredRef.current = true;
             const transcript = transcriptRef.current.join("\n");
-            console.log("[KalturaAvatar] Transcript lines:", transcriptRef.current.length);
             setStatus("idle");
             onSessionRef.current?.(transcript);
             scheduleBackgroundReload();
           }
           return;
+        }
+
+        // ── Session end — keyword scan fallback (catches any naming variant) ─
+        if (!sessionEndFiredRef.current && conversationStarted.current) {
+          const raw = JSON.stringify(evt.data).toLowerCase();
+          const leaveHints = [
+            "leaveroombtn", "leave_room", "leaveroom",
+            "call_end", "callend", "call_ended", "callended",
+            "session_end", "sessionend", "session_ended", "sessionended",
+            "room_left", "roomleft", "room_closed", "roomclosed",
+            "hangup", "hang_up", "disconnected", "meeting_ended",
+            "user_left", "userleft", "participant_left",
+          ];
+          if (leaveHints.some(h => raw.includes(h))) {
+            sessionEndFiredRef.current = true;
+            const transcript = transcriptRef.current.join("\n");
+            setStatus("idle");
+            onSessionRef.current?.(transcript);
+            scheduleBackgroundReload();
+            return;
+          }
         }
 
         // ── Persona detection (runs for every message) ─────────────────────
