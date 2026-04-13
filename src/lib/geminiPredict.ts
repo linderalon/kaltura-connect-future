@@ -1,8 +1,8 @@
 /**
- * Client-side Gemini prediction — used for the static GitHub Pages build.
- * Calls the Gemini API directly from the browser using NEXT_PUBLIC_GEMINI_API_KEY.
+ * Client-side Gemini prediction using the REST API directly (no SDK).
+ * The SDK has Node.js compatibility issues in static browser bundles.
+ * Plain fetch works in every browser and avoids all CORS/bundling issues.
  */
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getPersonaDetails } from "./personaEngine";
 import type { Persona } from "./personaEngine";
 
@@ -23,22 +23,22 @@ Voice rules:
 - Humor should be warm and self-aware, never at the visitor's expense
 - End with a Kaltura tie-in that feels EARNED through the narrative, never forced or salesy
 
-Output format: You will always respond with exactly these sections in order, delimited by the exact markers shown. Do not add any text outside the markers.
+Output format: respond with EXACTLY these four sections, delimited by the markers. No text outside the markers.
 
 [PERSONA]
-...one key: VIDEO_VISIONARY | SIGNAL_IN_THE_NOISE | THE_FAST_FORWARD | HUMAN_AMPLIFIER | ONE_PERSON_STUDIO | KNOWLEDGE_BUILDER...
+VIDEO_VISIONARY or SIGNAL_IN_THE_NOISE or THE_FAST_FORWARD or HUMAN_AMPLIFIER or ONE_PERSON_STUDIO or KNOWLEDGE_BUILDER
 [/PERSONA]
 
 [PREDICTION]
-...180 words max...
+180 words max
 [/PREDICTION]
 
 [CARD_SUMMARY]
-...20 words max...
+20 words max
 [/CARD_SUMMARY]
 
 [LINKEDIN_CAPTION]
-...2–3 lines + hashtags...
+2-3 lines + hashtags
 [/LINKEDIN_CAPTION]`;
 
 function parseSection(text: string, tag: string): string {
@@ -55,41 +55,68 @@ function buildPrompt(visitorName: string, persona: Persona, transcript: string):
   const baseTemplate = details.fullPrediction.replace(/\[NAME\]/g, visitorName);
 
   if (transcript?.trim() && transcript.trim().length > 50) {
-    return `Create a personalized oracle prediction for this visitor based on their REAL conversation with the oracle.
+    return `Create a personalized oracle prediction based on this REAL conversation.
 
 VISITOR NAME: ${visitorName}
 
-ACTUAL CONVERSATION TRANSCRIPT:
+CONVERSATION TRANSCRIPT:
 ${transcript}
 
-PERSONA ARCHETYPES — choose the single best fit for this visitor based on the transcript:
-- VIDEO_VISIONARY: visual storytelling, video production, creative media, film
-- SIGNAL_IN_THE_NOISE: data analytics, measurement, ROI, evidence-based decisions
-- THE_FAST_FORWARD: speed, execution, implementation, action-oriented, ship fast
-- HUMAN_AMPLIFIER: people leadership, team culture, engagement, warmth, coaching
-- ONE_PERSON_STUDIO: solo content creator, scaling production, self-sufficient creator
-- KNOWLEDGE_BUILDER: learning & development, training, long-term infrastructure, education
+PERSONA CHOICES (pick the ONE that best fits what this visitor said):
+- VIDEO_VISIONARY: visual storytelling, video production, creative media
+- SIGNAL_IN_THE_NOISE: data analytics, measurement, ROI, evidence
+- THE_FAST_FORWARD: speed, execution, ship fast, action-oriented
+- HUMAN_AMPLIFIER: people, team culture, engagement, warmth
+- ONE_PERSON_STUDIO: solo content creator, scaling production
+- KNOWLEDGE_BUILDER: learning & development, training, infrastructure
 
-Instructions — output ALL four sections, no extra text outside them:
-1. [PERSONA] — Exactly one key from the list above that best matches this visitor's conversation. No explanation, just the key.
-2. [PREDICTION] — Write a warm, theatrical, specific prediction grounded in what ${visitorName} actually said. Reference their specific words, challenges, and aspirations. Use ${visitorName}'s name 2–3 times. End with an earned Kaltura tie-in. 180 words max.
-3. [CARD_SUMMARY] — One punchy sentence (20 words max) that captures their unique destiny.
-4. [LINKEDIN_CAPTION] — Written in first person as ${visitorName}. 2–3 lines + 3–4 hashtags. Authentic, not cringe.`;
+Output the four sections using the exact markers from your instructions.`;
   }
 
-  return `Create a personalized oracle prediction for this visitor.
+  return `Create a personalized oracle prediction.
 
 VISITOR NAME: ${visitorName}
-PERSONA: ${details.name} — "${details.tagline}"
+CONTEXT: ${details.name} — "${details.tagline}"
 
-BASE PREDICTION TEMPLATE:
+BASE TEMPLATE:
 ${baseTemplate}
 
-Instructions — output ALL four sections:
-1. [PERSONA] — The persona key that best fits this visitor.
-2. [PREDICTION] — Personalize using the visitor name. 180 words max.
-3. [CARD_SUMMARY] — One punchy sentence (20 words max).
-4. [LINKEDIN_CAPTION] — First person, 2–3 lines + hashtags.`;
+Output the four sections using the exact markers from your instructions. Choose the PERSONA that genuinely fits this visitor best.`;
+}
+
+function detectPersona(text: string, fallback: Persona): Persona {
+  const rawSection = parseSection(text, "PERSONA").trim().toUpperCase().replace(/[\s-]+/g, "_");
+
+  // 1. Exact match from [PERSONA] section
+  if (VALID_PERSONAS.includes(rawSection as Persona)) return rawSection as Persona;
+
+  // 2. Partial key match (e.g. "FAST_FORWARD" → "THE_FAST_FORWARD")
+  const partial = VALID_PERSONAS.find(p =>
+    p.includes(rawSection) || (rawSection && rawSection.includes(p.replace(/^THE_/, "")))
+  );
+  if (partial) return partial;
+
+  // 3. Scan full response for any exact persona key
+  const upper = text.toUpperCase();
+  const scanMatch = VALID_PERSONAS.find(p => upper.includes(p));
+  if (scanMatch) return scanMatch;
+
+  // 4. Readable name scan ("video visionary", "fast forward", etc.)
+  const lower = text.toLowerCase();
+  const readableMap: [string, Persona][] = [
+    ["video visionary",    "VIDEO_VISIONARY"],
+    ["signal in the noise","SIGNAL_IN_THE_NOISE"],
+    ["fast forward",       "THE_FAST_FORWARD"],
+    ["human amplifier",    "HUMAN_AMPLIFIER"],
+    ["one person studio",  "ONE_PERSON_STUDIO"],
+    ["one-person studio",  "ONE_PERSON_STUDIO"],
+    ["knowledge builder",  "KNOWLEDGE_BUILDER"],
+  ];
+  for (const [name, p] of readableMap) {
+    if (lower.includes(name)) return p;
+  }
+
+  return fallback;
 }
 
 export async function generatePrediction(
@@ -97,54 +124,33 @@ export async function generatePrediction(
   persona: Persona,
   transcript: string,
 ): Promise<{ prediction: string; detectedPersona: Persona }> {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? "";
+  const apiKey    = process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? "";
   const modelName = process.env.NEXT_PUBLIC_GEMINI_MODEL ?? "gemini-2.0-flash";
+  const prompt    = buildPrompt(visitorName, persona, transcript);
 
-  const genAI  = new GoogleGenerativeAI(apiKey);
-  const model  = genAI.getGenerativeModel({ model: modelName, systemInstruction: SYSTEM_PROMPT });
-  const prompt = buildPrompt(visitorName, persona, transcript);
-
-  const result = await model.generateContent(prompt);
-  const text   = result.response.text();
-
-  const prediction = parseSection(text, "PREDICTION") || getPersonaDetails(persona).fullPrediction.replace(/\[NAME\]/g, visitorName);
-
-  // ── Persona detection — three levels of fallback ──────────────────────────
-  const rawPersona = parseSection(text, "PERSONA").trim().toUpperCase().replace(/[\s-]+/g, "_");
-
-  // 1. Exact match
-  let detectedPersona: Persona | null = VALID_PERSONAS.includes(rawPersona as Persona)
-    ? (rawPersona as Persona) : null;
-
-  // 2. Partial key match (handles "FAST_FORWARD" matching "THE_FAST_FORWARD")
-  if (!detectedPersona && rawPersona) {
-    detectedPersona = VALID_PERSONAS.find(p =>
-      p.includes(rawPersona) || rawPersona.includes(p.replace(/^THE_/, ""))
-    ) ?? null;
-  }
-
-  // 3. Full-text scan — look for any VALID_PERSONA key anywhere in the response
-  if (!detectedPersona) {
-    const upper = text.toUpperCase();
-    detectedPersona = VALID_PERSONAS.find(p => upper.includes(p)) ?? null;
-  }
-
-  // 4. Readable-name scan — "Video Visionary", "Fast Forward", etc.
-  if (!detectedPersona) {
-    const lower = text.toLowerCase();
-    const readable: Record<string, Persona> = {
-      "video visionary":    "VIDEO_VISIONARY",
-      "signal in the noise":"SIGNAL_IN_THE_NOISE",
-      "fast forward":       "THE_FAST_FORWARD",
-      "human amplifier":    "HUMAN_AMPLIFIER",
-      "one person studio":  "ONE_PERSON_STUDIO",
-      "one-person studio":  "ONE_PERSON_STUDIO",
-      "knowledge builder":  "KNOWLEDGE_BUILDER",
-    };
-    for (const [name, p] of Object.entries(readable)) {
-      if (lower.includes(name)) { detectedPersona = p; break; }
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents:           [{ parts: [{ text: prompt }] }],
+        generationConfig:   { temperature: 0.85, maxOutputTokens: 1200 },
+      }),
     }
+  );
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.statusText);
+    throw new Error(`Gemini ${res.status}: ${err}`);
   }
 
-  return { prediction, detectedPersona: detectedPersona ?? persona };
+  const data = await res.json();
+  const text  = (data.candidates?.[0]?.content?.parts?.[0]?.text ?? "") as string;
+
+  const prediction     = parseSection(text, "PREDICTION") || getPersonaDetails(persona).fullPrediction.replace(/\[NAME\]/g, visitorName);
+  const detectedPersona = detectPersona(text, persona);
+
+  return { prediction, detectedPersona };
 }
