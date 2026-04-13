@@ -21,6 +21,10 @@ import { KalturaAvatar } from "@/components/KalturaAvatar";
 import type { KalturaAvatarHandle } from "@/components/KalturaAvatar";
 import { getPersonaDetails } from "@/lib/personaEngine";
 import type { Persona } from "@/lib/personaEngine";
+import { generatePrediction } from "@/lib/geminiPredict";
+
+// Base path for static assets (empty on localhost, /kaltura-connect-future on GitHub Pages)
+const BP = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 type Stage = "idle" | "active" | "card";
 
@@ -45,12 +49,12 @@ const PERSONA_COLORS: Record<Persona, string> = {
 
 // Persona card images — local, with Centra typography already baked in
 const PERSONA_IMAGES: Record<Persona, string> = {
-  VIDEO_VISIONARY:     "/images/personas/video-visionary.png",
-  SIGNAL_IN_THE_NOISE: "/images/personas/signal-noise.png",
-  THE_FAST_FORWARD:    "/images/personas/fast-forward.png",
-  HUMAN_AMPLIFIER:     "/images/personas/human-amplifier.png",
-  ONE_PERSON_STUDIO:   "/images/personas/one-person-studio.png",
-  KNOWLEDGE_BUILDER:   "/images/personas/knowledge-builder.png",
+  VIDEO_VISIONARY:     `${BP}/images/personas/video-visionary.png`,
+  SIGNAL_IN_THE_NOISE: `${BP}/images/personas/signal-noise.png`,
+  THE_FAST_FORWARD:    `${BP}/images/personas/fast-forward.png`,
+  HUMAN_AMPLIFIER:     `${BP}/images/personas/human-amplifier.png`,
+  ONE_PERSON_STUDIO:   `${BP}/images/personas/one-person-studio.png`,
+  KNOWLEDGE_BUILDER:   `${BP}/images/personas/knowledge-builder.png`,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -408,7 +412,7 @@ function IdleView({ onStart }: { onStart: () => void }) {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/images/kaltura-logo.png"
+          src={`${BP}/images/kaltura-logo.png`}
           alt="Kaltura"
           style={{ height: "70px", width: "auto" }}
         />
@@ -450,7 +454,7 @@ function ActiveView({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/images/kaltura-logo.png"
+          src={`${BP}/images/kaltura-logo.png`}
           alt="Kaltura"
           style={{ height: "55px", width: "auto" }}
         />
@@ -686,39 +690,18 @@ function TarotCardView({
   const imgSrc   = cardPersona ? PERSONA_IMAGES[cardPersona] : null;
   const name     = visitorName.trim();
 
-  // ── Stream prediction; reveal card only on complete ──────────────────────
+  // ── Generate prediction client-side; reveal card when done ──────────────
   useEffect(() => {
     abortRef.current = false;
-    async function stream() {
+    async function predict() {
       try {
-        const res = await fetch("/api/predict", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ persona, visitorName: name || "Guest", answers: {}, transcript }),
-        });
-        if (!res.body) throw new Error("No body");
-        const reader  = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        while (!abortRef.current) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop() ?? "";
-          for (const part of parts) {
-            const line = part.startsWith("data: ") ? part.slice(6) : part;
-            if (!line.trim()) continue;
-            try {
-              const evt = JSON.parse(line);
-              if (evt.type === "complete") {
-                if (evt.prediction) setPredictionText(evt.prediction);
-                if (evt.persona)    setCardPersona(evt.persona as Persona);
-                setPredictionReady(true); // ← triggers card reveal
-              }
-            } catch { /* skip */ }
-          }
-        }
+        const { prediction, detectedPersona } = await generatePrediction(
+          name || "Guest", persona, transcript,
+        );
+        if (abortRef.current) return;
+        setPredictionText(prediction);
+        setCardPersona(detectedPersona);
+        setPredictionReady(true);
       } catch {
         const fallback = getPersonaDetails(persona);
         setCardPersona(persona);
@@ -726,7 +709,7 @@ function TarotCardView({
         setPredictionReady(true);
       }
     }
-    stream();
+    predict();
     return () => { abortRef.current = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -977,7 +960,7 @@ function TarotCardView({
                 {/* Footer */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexShrink: 0 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/kaltura-logo.png" alt="Kaltura" style={{ height: "33px", width: "auto", opacity: 0.7 }} />
+                  <img src={`${BP}/images/kaltura-logo.png`} alt="Kaltura" style={{ height: "33px", width: "auto", opacity: 0.7 }} />
                   <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.88rem", letterSpacing: "0.05em" }}>Connect 2026</span>
                 </div>
 

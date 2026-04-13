@@ -8,7 +8,7 @@ export default function GlobalHeader() {
         {/* Wordmark with Kaltura red accent */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/images/kaltura-logo.png"
+          src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/images/kaltura-logo.png`}
           alt="Kaltura"
           style={{ height: "70px", width: "auto" }}
         />
