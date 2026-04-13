@@ -301,7 +301,7 @@ const AVATAR_URL =
   process.env.NEXT_PUBLIC_KALTURA_AVATAR_URL ??
   "https://meet.avatar.us.kaltura.ai/695cd19880ea19bd1b816a08/talk-to-agent?aiclid=EttXcIcr&flow_id=agent-90";
 
-const LOAD_SAFETY_MS = 6_000;
+const LOAD_SAFETY_MS = 3_000;
 
 export const KalturaAvatar = forwardRef<KalturaAvatarHandle, KalturaAvatarProps>(
   function KalturaAvatar({ className = "", active = false, onPersonaDetected, onSessionEnd }, ref) {

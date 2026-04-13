@@ -39,6 +39,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={centra.variable}>
+      <head>
+        {/* Pre-warm the connection to the Kaltura avatar service */}
+        <link rel="preconnect" href="https://meet.avatar.us.kaltura.ai" />
+        <link rel="dns-prefetch" href="https://meet.avatar.us.kaltura.ai" />
+        <link rel="preconnect" href="https://cfvod.kaltura.com" />
+      </head>
       <body
         className={centra.className}
         style={{
