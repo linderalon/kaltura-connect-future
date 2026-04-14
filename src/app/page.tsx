@@ -689,18 +689,21 @@ function TarotCardView({
   const details  = getPersonaDetails(cardPersona ?? "VIDEO_VISIONARY");
   const imgSrc   = cardPersona ? PERSONA_IMAGES[cardPersona] : null;
   const name     = visitorName.trim();
+  // displayName starts from visitorName; overridden by Gemini's extraction from transcript
+  const [displayName, setDisplayName] = useState(name || "");
 
   // ── Generate prediction client-side; reveal card when done ──────────────
   useEffect(() => {
     abortRef.current = false;
     async function predict() {
       try {
-        const { prediction, detectedPersona } = await generatePrediction(
+        const { prediction, detectedPersona, extractedName } = await generatePrediction(
           name || "Guest", persona, transcript,
         );
         if (abortRef.current) return;
         setPredictionText(prediction);
         setCardPersona(detectedPersona);
+        if (extractedName && extractedName !== "Guest") setDisplayName(extractedName);
         setPredictionReady(true);
       } catch (err) {
         // Never fall back to keyword-scored persona — use VIDEO_VISIONARY as safe default
@@ -747,7 +750,7 @@ function TarotCardView({
         backgroundColor: null, scale: 2, useCORS: true, allowTaint: true,
       });
       const link = document.createElement("a");
-      link.download = `kaltura-${(name || "future").toLowerCase().replace(/\s+/g, "-")}-2026.png`;
+      link.download = `kaltura-${(displayName || name || "future").toLowerCase().replace(/\s+/g, "-")}-2026.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
     } finally {
@@ -934,13 +937,13 @@ function TarotCardView({
                 </div>
 
                 {/* Visitor name */}
-                {name && (
+                {displayName && (
                   <p style={{
                     fontSize: "2.8rem", fontFamily: "var(--font-centra)", fontWeight: 700,
                     color: "#fff", margin: 0, lineHeight: 1.05, letterSpacing: "-0.01em", flexShrink: 0,
                     textAlign: "center",
                   }}>
-                    {name}
+                    {displayName}
                   </p>
                 )}
 

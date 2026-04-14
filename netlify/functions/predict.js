@@ -11,7 +11,11 @@ const SYSTEM_PROMPT = `You are the Kaltura Future Teller — an oracle who revea
 
 Tone: warm, theatrical, funny, flattering. Never embarrassing, never condescending, never generic.
 
-Output format: respond with EXACTLY these four sections using the exact markers. No text outside the markers.
+Output format: respond with EXACTLY these sections using the exact markers. No text outside the markers.
+
+[NAME]
+The visitor's first name — extract from the transcript, or use the provided name
+[/NAME]
 
 [PERSONA]
 One of: VIDEO_VISIONARY | SIGNAL_IN_THE_NOISE | THE_FAST_FORWARD | HUMAN_AMPLIFIER | ONE_PERSON_STUDIO | KNOWLEDGE_BUILDER
@@ -129,15 +133,16 @@ exports.handler = async (event) => {
       return { statusCode: res.status, headers, body: JSON.stringify({ error: errText }) };
     }
 
-    const data       = await res.json();
-    const text       = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    const prediction = parseSection(text, "PREDICTION") || `The oracle sees great things ahead for you, ${visitorName}.`;
+    const data            = await res.json();
+    const text            = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const prediction      = parseSection(text, "PREDICTION") || `The oracle sees great things ahead for you, ${visitorName}.`;
     const detectedPersona = detectPersona(text, persona || "VIDEO_VISIONARY");
+    const extractedName   = parseSection(text, "NAME").trim() || visitorName || "Guest";
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ prediction, detectedPersona }),
+      body: JSON.stringify({ prediction, detectedPersona, extractedName }),
     };
   } catch (err) {
     return {

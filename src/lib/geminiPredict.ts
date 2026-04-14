@@ -14,10 +14,9 @@ export async function generatePrediction(
   visitorName: string,
   persona: Persona,
   transcript: string,
-): Promise<{ prediction: string; detectedPersona: Persona }> {
+): Promise<{ prediction: string; detectedPersona: Persona; extractedName: string }> {
 
   // ── Production: call the Netlify serverless function ──────────────────────
-  // The function keeps the API key server-side and handles persona detection.
   const isLocalhost = typeof window !== "undefined" &&
     (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
@@ -29,16 +28,13 @@ export async function generatePrediction(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visitorName, persona, transcript }),
       });
-
       console.log("[predict] function status:", res.status);
-
       if (res.ok) {
-        const data = await res.json() as { prediction: string; detectedPersona: string };
-        console.log("[predict] success, persona:", data.detectedPersona);
+        const data = await res.json() as { prediction: string; detectedPersona: string; extractedName?: string };
+        console.log("[predict] success, persona:", data.detectedPersona, "name:", data.extractedName);
         const detectedPersona = VALID_PERSONAS.includes(data.detectedPersona as Persona)
-          ? (data.detectedPersona as Persona)
-          : persona;
-        return { prediction: data.prediction, detectedPersona };
+          ? (data.detectedPersona as Persona) : persona;
+        return { prediction: data.prediction, detectedPersona, extractedName: data.extractedName || visitorName };
       } else {
         const errBody = await res.text();
         console.error("[predict] function error:", res.status, errBody);
@@ -54,13 +50,14 @@ export async function generatePrediction(
 
   const SYSTEM = `You are the Kaltura Future Teller — an oracle at Kaltura Connect 2026.
 Output EXACTLY these sections using the exact markers, no text outside them:
+[NAME]The visitor's first name extracted from the transcript (or the provided name if no transcript)[/NAME]
 [PERSONA]VIDEO_VISIONARY or SIGNAL_IN_THE_NOISE or THE_FAST_FORWARD or HUMAN_AMPLIFIER or ONE_PERSON_STUDIO or KNOWLEDGE_BUILDER[/PERSONA]
-[PREDICTION]180 words max[/PREDICTION]
+[PREDICTION]180 words max — use the visitor's actual name[/PREDICTION]
 [CARD_SUMMARY]20 words max[/CARD_SUMMARY]
 [LINKEDIN_CAPTION]2-3 lines + hashtags[/LINKEDIN_CAPTION]`;
 
   const prompt = transcript?.trim().length > 50
-    ? `Visitor: ${visitorName}. Transcript: ${transcript}. Pick the best persona and write the prediction.`
+    ? `Visitor name if known: ${visitorName || "unknown"}. Transcript: ${transcript}. Extract their first name, pick the best persona, write the prediction.`
     : `Visitor: ${visitorName}. Write a warm oracle prediction and pick the best persona.`;
 
   const res = await fetch(
@@ -90,6 +87,7 @@ Output EXACTLY these sections using the exact markers, no text outside them:
   const rawSection     = parseSection(text, "PERSONA").toUpperCase().replace(/[\s-]+/g, "_");
   const detectedPersona: Persona = VALID_PERSONAS.includes(rawSection as Persona)
     ? (rawSection as Persona) : persona;
+  const extractedName  = parseSection(text, "NAME") || visitorName;
 
-  return { prediction, detectedPersona };
+  return { prediction, detectedPersona, extractedName };
 }
