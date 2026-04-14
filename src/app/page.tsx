@@ -702,9 +702,12 @@ function TarotCardView({
         setPredictionText(prediction);
         setCardPersona(detectedPersona);
         setPredictionReady(true);
-      } catch {
-        const fallback = getPersonaDetails(persona);
-        setCardPersona(persona);
+      } catch (err) {
+        // Never fall back to keyword-scored persona — use VIDEO_VISIONARY as safe default
+        const safePersona: Persona = "VIDEO_VISIONARY";
+        const fallback = getPersonaDetails(safePersona);
+        console.error("[TarotCard] generatePrediction failed:", err);
+        setCardPersona(safePersona);
         setPredictionText(fallback.fullPrediction.replace(/\[NAME\]/g, name || "Guest"));
         setPredictionReady(true);
       }

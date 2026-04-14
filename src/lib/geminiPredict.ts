@@ -23,20 +23,29 @@ export async function generatePrediction(
 
   if (!isLocalhost) {
     try {
+      console.log("[predict] calling /.netlify/functions/predict");
       const res = await fetch("/.netlify/functions/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visitorName, persona, transcript }),
       });
 
+      console.log("[predict] function status:", res.status);
+
       if (res.ok) {
         const data = await res.json() as { prediction: string; detectedPersona: string };
+        console.log("[predict] success, persona:", data.detectedPersona);
         const detectedPersona = VALID_PERSONAS.includes(data.detectedPersona as Persona)
           ? (data.detectedPersona as Persona)
           : persona;
         return { prediction: data.prediction, detectedPersona };
+      } else {
+        const errBody = await res.text();
+        console.error("[predict] function error:", res.status, errBody);
       }
-    } catch { /* fall through to direct call */ }
+    } catch (e) {
+      console.error("[predict] fetch failed:", e);
+    }
   }
 
   // ── Local dev: call Gemini REST directly ───────────────────────────────────
