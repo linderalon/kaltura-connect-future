@@ -775,6 +775,31 @@ function TarotCardView({
         </div>
       )}
 
+      {/* ── Magical full-screen backdrop — visible only while loading ─────── */}
+      <AnimatePresence>
+        {!predictionReady && (
+          <motion.div
+            key="magic-bg"
+            className="absolute inset-0 overflow-hidden"
+            style={{ backgroundColor: "#07101F", zIndex: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 25% 45%, rgba(90,0,200,0.45) 0%, transparent 55%)" }}
+              animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} />
+            <motion.div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 75% 55%, rgba(0,160,190,0.3) 0%, transparent 50%)" }}
+              animate={{ opacity: [0.4, 0.85, 0.4] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }} />
+            <motion.div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 15%, rgba(160,0,240,0.25) 0%, transparent 45%)" }}
+              animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 4 }} />
+            <div className="absolute inset-0 pointer-events-none">
+              <ParticleField count={60} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
 
         {/* ── LOADING: crystal ball swirl ─────────────────────────────────── */}
