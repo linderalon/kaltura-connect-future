@@ -46,7 +46,7 @@ export async function generatePrediction(
 
   // ── Local dev: call Gemini REST directly ───────────────────────────────────
   const apiKey    = process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? "";
-  const modelName = process.env.NEXT_PUBLIC_GEMINI_MODEL   ?? "gemini-2.0-flash";
+  const modelName = process.env.NEXT_PUBLIC_GEMINI_MODEL   ?? "gemini-2.5-pro";
 
   const SYSTEM = `You are the Kaltura Future Teller — an oracle at Kaltura Connect 2026.
 Output EXACTLY these sections using the exact markers, no text outside them:
