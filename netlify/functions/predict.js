@@ -107,7 +107,7 @@ exports.handler = async (event) => {
   try {
     const { visitorName, persona, transcript } = JSON.parse(event.body || "{}");
     const apiKey    = process.env.GEMINI_API_KEY || "";
-    const modelName = process.env.GEMINI_MODEL   || "gemini-2.5-pro";
+    const modelName = process.env.GEMINI_MODEL   || "gemini-2.5-flash";
 
     if (!apiKey) {
       return { statusCode: 500, headers, body: JSON.stringify({ error: "GEMINI_API_KEY not set" }) };
