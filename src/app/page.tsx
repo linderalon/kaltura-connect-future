@@ -698,12 +698,12 @@ function TarotCardView({
     async function predict() {
       try {
         const { prediction, detectedPersona, extractedName } = await generatePrediction(
-          name || "Guest", persona, transcript,
+          name || "", persona, transcript,
         );
         if (abortRef.current) return;
         setPredictionText(prediction);
         setCardPersona(detectedPersona);
-        if (extractedName && extractedName !== "Guest") setDisplayName(extractedName);
+        if (extractedName) setDisplayName(extractedName);
         setPredictionReady(true);
       } catch (err) {
         // Never fall back to keyword-scored persona — use VIDEO_VISIONARY as safe default
@@ -711,7 +711,7 @@ function TarotCardView({
         const fallback = getPersonaDetails(safePersona);
         console.error("[TarotCard] generatePrediction failed:", err);
         setCardPersona(safePersona);
-        setPredictionText(fallback.fullPrediction.replace(/\[NAME\]/g, name || "Guest"));
+        setPredictionText(fallback.fullPrediction.replace(/\[NAME\]/g, name || ""));
         setPredictionReady(true);
       }
     }

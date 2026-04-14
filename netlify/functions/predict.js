@@ -113,7 +113,7 @@ exports.handler = async (event) => {
       return { statusCode: 500, headers, body: JSON.stringify({ error: "GEMINI_API_KEY not set" }) };
     }
 
-    const prompt = buildPrompt(visitorName || "Guest", persona || "VIDEO_VISIONARY", transcript || "");
+    const prompt = buildPrompt(visitorName || "", persona || "VIDEO_VISIONARY", transcript || "");
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
@@ -137,7 +137,7 @@ exports.handler = async (event) => {
     const text            = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     const prediction      = parseSection(text, "PREDICTION") || `The oracle sees great things ahead for you, ${visitorName}.`;
     const detectedPersona = detectPersona(text, persona || "VIDEO_VISIONARY");
-    const extractedName   = parseSection(text, "NAME").trim() || visitorName || "Guest";
+    const extractedName   = parseSection(text, "NAME").trim() || visitorName || "";
 
     return {
       statusCode: 200,
